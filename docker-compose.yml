@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: excel_chat_db
+    environment:
+      POSTGRES_DB: excel_chat
+      POSTGRES_USER: excel_user
+      POSTGRES_PASSWORD: excel_pass_2024
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
