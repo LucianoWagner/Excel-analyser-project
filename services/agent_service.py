@@ -56,6 +56,19 @@ async def query_with_agent(df: pd.DataFrame, question: str) -> QueryResponse:
     # Clear any existing matplotlib figures
     plt.close("all")
 
+    # Build a description of the dataframe for context
+    df_info = (
+        f"La variable `df` ya existe y contiene {len(df)} filas y {len(df.columns)} columnas.\n"
+        f"Columnas: {list(df.columns)}\n"
+        f"Tipos: {df.dtypes.to_dict()}\n"
+        f"Primeras 3 filas de ejemplo:\n{df.head(3).to_string()}\n\n"
+        "REGLAS OBLIGATORIAS:\n"
+        "1. SIEMPRE usa la variable `df` que ya existe. NUNCA crees un DataFrame nuevo.\n"
+        "2. `df` tiene TODAS las filas (no solo las de ejemplo).\n"
+        "3. NUNCA uses pd.DataFrame({...}) para crear datos.\n"
+        "4. Responde en español.\n"
+    )
+
     # Create agent with the copy
     agent = create_pandas_dataframe_agent(
         llm,
@@ -64,16 +77,13 @@ async def query_with_agent(df: pd.DataFrame, question: str) -> QueryResponse:
         return_intermediate_steps=True,
         allow_dangerous_code=True,
         agent_type="tool-calling",
-        prefix=(
-            "Sos un analista de datos experto. Respondé en español. "
-            "IMPORTANTE: La variable `df` contiene TODAS las filas del dataset. "
-            "Lo que ves arriba es solo un preview. SIEMPRE usá `df` directamente, "
-            "NUNCA hardcodees datos ni crees un DataFrame nuevo. "
-            "Cuando te pidan un gráfico, usá matplotlib.pyplot. "
-            "Siempre poné título y labels descriptivos en español. "
-            "Usá plt.figure() antes de cada gráfico nuevo. "
-            "NO modifiques el DataFrame original. Solo lectura."
-        ),
+        include_df_in_prompt=False,
+        prefix=df_info,
+        suffix=(
+            "Recordá: NUNCA crees un DataFrame nuevo con pd.DataFrame(). "
+            "Usá SIEMPRE la variable `df` que tiene las {len_df} filas completas. "
+            "Cuando te pidan un gráfico, usá plt.figure() antes."
+        ).format(len_df=len(df)),
     )
 
     try:

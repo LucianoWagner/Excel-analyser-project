@@ -1,6 +1,6 @@
 # 🗂️ Chat con tu Excel
 
-Backend en **Python + FastAPI** que permite subir un archivo Excel y hacerle consultas en lenguaje natural usando **LangChain** y **Groq** (LLM gratuito).
+Backend en **Python + FastAPI** con **interfaz web integrada** que permite subir un archivo Excel y hacerle consultas en lenguaje natural usando **LangChain** y **Groq** (LLM gratuito).
 
 ---
 
@@ -55,7 +55,7 @@ El sistema tiene **dos modos de operación** según el rol del usuario:
 │  │                │    │                             │   │
 │  │  Pandas Agent  │    │  LLM clasifica intención    │   │
 │  │  genera código │    │  → ejecuta función segura   │   │
-│  │  libre, charts │    │  → 8 ops datos + 7 charts   │   │
+│  │  libre, charts │    │  → 9 ops datos + 7 charts   │   │
 │  └────────────────┘    └─────────────────────────────┘   │
 │           │                        │                     │
 │           └────────┬───────────────┘                     │
@@ -94,6 +94,10 @@ El sistema tiene **dos modos de operación** según el rol del usuario:
 │   ├── agent_service.py        # Pandas Agent (modo admin)
 │   ├── structured_service.py   # Router de intenciones (modo user)
 │   └── chart_service.py        # 7 tipos de gráficos
+├── static/
+│   ├── index.html              # Frontend SPA (login + chat)
+│   ├── style.css               # Dark theme, animaciones
+│   └── app.js                  # Auth, upload, chat, gráficos inline
 └── utils/
     └── safety.py               # Blocklist de código + validaciones
 ```
@@ -104,7 +108,8 @@ El sistema tiene **dos modos de operación** según el rol del usuario:
 
 ### Modo Structured (usuarios normales)
 - **Sin ejecución de código** — el LLM solo clasifica la intención
-- Funciones predefinidas con validación de parámetros
+- Funciones predefinidas con validación de columnas y parámetros
+- Whitelist de funciones de agregación (mean, sum, count, min, max, median)
 - Imposible ejecutar código arbitrario
 
 ### Modo Agent (admin)
@@ -162,9 +167,26 @@ Al iniciar, el server:
 - ✅ Crea las tablas en PostgreSQL
 - ✅ Crea el usuario admin default (`admin / admin123`)
 
-### 5. Acceder a la documentación
+### 5. Acceder a la aplicación
 
-Abrí en el navegador: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Frontend**: [http://localhost:8000](http://localhost:8000) — interfaz de chat
+- **API docs**: [http://localhost:8000/docs](http://localhost:8000/docs) — Swagger UI
+
+---
+
+## 💻 Frontend
+
+Interfaz web tipo chatbox servida directamente desde FastAPI (sin build step, sin npm).
+
+### Características
+- **Tema oscuro** con gradientes violeta/azul
+- **Login / Registro** integrado
+- **Upload con drag & drop** de archivos Excel
+- **Chat en tiempo real** con respuestas en lenguaje natural
+- **Gráficos inline** renderizados como imágenes PNG
+- **Guía interactiva** con sugerencias clickeables ("¿Qué puedo preguntar?")
+- **Responsive** para mobile
+- **Selector de sheet** para consultar diferentes hojas del Excel
 
 ---
 

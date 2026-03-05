@@ -1,8 +1,11 @@
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from database import create_tables, async_session
 from auth import create_default_admin
@@ -15,6 +18,8 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 # ── Lifespan ──
@@ -60,6 +65,15 @@ app.add_middleware(
 app.include_router(auth_router.router)
 app.include_router(upload_router.router)
 app.include_router(query_router.router)
+
+# ── Static files ──
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+# ── Root → Frontend ──
+@app.get("/", include_in_schema=False)
+async def root():
+    return FileResponse(str(STATIC_DIR / "index.html"))
 
 
 # ── Health ──

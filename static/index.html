@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat con tu Excel</title>
+    <meta name="description" content="Subí tu Excel y hacele preguntas en lenguaje natural con IA">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+    <!-- ══════════════ LOGIN VIEW ══════════════ -->
+    <div id="login-view" class="login-container">
+        <div class="login-card">
+            <h1>Chat con tu Excel</h1>
+            <p class="subtitle">Subí tu Excel y preguntale lo que quieras</p>
+
+            <div id="login-alert" class="alert"></div>
+
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-username">Usuario</label>
+                    <input type="text" id="login-username" placeholder="Tu nombre de usuario" required
+                        autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Contraseña</label>
+                    <input type="password" id="login-password" placeholder="Tu contraseña" required
+                        autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-primary" id="login-btn">Iniciar sesión</button>
+            </form>
+
+            <div class="login-footer">
+                <span id="login-toggle-text">¿No tenés cuenta? <a id="toggle-register">Registrate</a></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════ CHAT VIEW ══════════════ -->
+    <div id="chat-view" class="chat-container">
+
+        <!-- Header -->
+        <div class="chat-header">
+            <div class="chat-header-left">
+                <span class="logo">Chat con tu Excel</span>
+                <span id="session-badge" class="session-badge no-file">
+                    Sin archivo
+                </span>
+            </div>
+            <div class="chat-header-right">
+                <div class="user-badge">
+                    <span class="username" id="header-username">admin</span>
+                    <span class="role" id="header-role">admin</span>
+                </div>
+                <button class="btn-icon" id="btn-logout" title="Cerrar sesión">⏻</button>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        <div class="chat-messages" id="chat-messages">
+            <div class="welcome-container" id="welcome-msg">
+                <h2>Bienvenido</h2>
+                <p>Subí un archivo Excel para empezar a hacerle preguntas con inteligencia artificial.</p>
+            </div>
+        </div>
+
+        <!-- Typing indicator -->
+        <div class="typing-indicator" id="typing-indicator">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="chat-input-area">
+            <!-- Upload zone (toggleable) -->
+            <div class="upload-zone" id="upload-zone">
+                <div class="upload-zone-icon">📂</div>
+                <div class="upload-zone-text">
+                    Arrastrá tu archivo Excel acá o <strong>hacé click</strong>
+                </div>
+                <input type="file" id="file-input" accept=".xlsx,.xls" hidden>
+            </div>
+
+            <!-- Help guide (shown after upload) -->
+            <div class="help-guide" id="help-guide">
+                <button class="help-toggle" id="help-toggle">💡 ¿Qué puedo preguntar? <span
+                        class="help-arrow">▾</span></button>
+                <div class="help-content" id="help-content">
+                    <div class="help-category">
+                        <span class="help-label">📊 Datos</span>
+                        <div class="help-chips">
+                            <button class="chip" data-q="Cuantas filas tiene el dataset?">Contar filas</button>
+                            <button class="chip" data-q="Que columnas tiene el dataset?">Ver columnas</button>
+                            <button class="chip" data-q="Dame las estadisticas descriptivas">Estadísticas</button>
+                            <button class="chip" data-q="Que valores unicos hay en la columna carrera?">Valores
+                                únicos</button>
+                        </div>
+                    </div>
+                    <div class="help-category">
+                        <span class="help-label">🔍 Consultas</span>
+                        <div class="help-chips">
+                            <button class="chip" data-q="Cuantos estudiantes tienen edad mayor a 25?">Filtrar
+                                datos</button>
+                            <button class="chip" data-q="Cual es el promedio de nota_promedio?">Promedio</button>
+                            <button class="chip"
+                                data-q="Promedio de nota_promedio agrupado por carrera">Agrupar</button>
+                            <button class="chip" data-q="Top 3 estudiantes con la nota mas alta">Top N</button>
+                            <button class="chip" data-q="Correlacion entre edad y nota_promedio">Correlación</button>
+                        </div>
+                    </div>
+                    <div class="help-category">
+                        <span class="help-label">📈 Gráficos</span>
+                        <div class="help-chips">
+                            <button class="chip" data-q="Grafico de barras de la columna carrera">Barras</button>
+                            <button class="chip" data-q="Histograma de nota_promedio">Histograma</button>
+                            <button class="chip" data-q="Grafico de torta de la columna ciudad">Torta</button>
+                            <button class="chip" data-q="Box plot de nota_promedio agrupado por carrera">Box
+                                plot</button>
+                            <button class="chip" data-q="Heatmap de correlacion">Heatmap</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sheet selector -->
+            <div class="sheet-selector" id="sheet-selector">
+                <label for="sheet-select">Sheet:</label>
+                <select id="sheet-select"></select>
+            </div>
+
+            <!-- Input row -->
+            <div class="chat-input-row">
+                <button class="btn-upload-toggle" id="btn-upload-toggle" title="Subir Excel">📎</button>
+                <textarea id="chat-input" placeholder="Escribí tu pregunta sobre el Excel..." rows="1"
+                    disabled></textarea>
+                <button class="btn-send" id="btn-send" disabled title="Enviar">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+
+</html>
