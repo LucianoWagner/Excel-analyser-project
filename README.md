@@ -118,10 +118,27 @@ El sistema tiene **dos modos de operación** según el rol del usuario:
 - Mini-blocklist de patrones peligrosos (`os.system`, `subprocess`, `exec`, etc.)
 - Solo accesible con autenticación de admin
 
+### Rate Limiting
+Protección contra abuso con `slowapi`:
+
+| Endpoint | Límite por defecto |
+|----------|-------------------|
+| `/query` | 10 requests/minuto por IP |
+| `/upload` | 5 requests/minuto por IP |
+| `/auth/*` | 10 requests/minuto por IP |
+
+Configurable vía `.env` (`RATE_LIMIT_QUERY`, `RATE_LIMIT_UPLOAD`, `RATE_LIMIT_AUTH`).
+
+### Sesiones con expiración
+- Los archivos Excel se guardan en memoria con **TTL de 60 minutos** de inactividad
+- Cada query **renueva el timer** automáticamente
+- Máximo **50 sesiones** simultáneas (la más vieja se elimina si se supera)
+- Si expira, solo hay que re-subir el Excel (no re-loguearse)
+- Configurable: `SESSION_TTL_MINUTES`, `MAX_SESSIONS`
+
 ### General
-- Autenticación JWT con bcrypt
+- Autenticación JWT con bcrypt (expira en 8hs, configurable con `JWT_EXPIRE_MINUTES`)
 - Validación de archivos (extensión, tamaño, cantidad de filas)
-- Rate limiting recomendado vía reverse proxy (nginx) en producción
 
 ---
 

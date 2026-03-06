@@ -26,6 +26,15 @@ class Settings(BaseSettings):
     max_rows: int = 100_000
     query_timeout_seconds: int = 30
 
+    # ── Sessions ──
+    session_ttl_minutes: int = 60          # Expire sessions after N minutes of inactivity
+    max_sessions: int = 50                 # Maximum concurrent sessions in memory
+
+    # ── Rate Limiting ──
+    rate_limit_query: str = "10/minute"    # Queries per user per minute
+    rate_limit_upload: str = "5/minute"    # Uploads per user per minute
+    rate_limit_auth: str = "10/minute"     # Auth attempts per IP per minute
+
     class Config:
         env_file = ".env"
         extra = "ignore"

@@ -1,8 +1,11 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from auth import get_current_user, CurrentUser
+from config import settings
 from models import QueryRequest, QueryResponse
 from services.excel_service import get_dataframe
 from services.agent_service import query_with_agent
@@ -11,10 +14,13 @@ from services.structured_service import query_structured
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Query"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/query", response_model=QueryResponse)
+@limiter.limit(settings.rate_limit_query)
 async def query_excel(
+    request: Request,
     req: QueryRequest,
     user: CurrentUser = Depends(get_current_user),
 ):

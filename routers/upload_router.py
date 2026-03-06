@@ -1,14 +1,20 @@
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, Request, UploadFile, File
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from auth import get_current_user, CurrentUser
+from config import settings
 from models import UploadResponse
 from services.excel_service import parse_and_store_excel
 
 router = APIRouter(tags=["Upload"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/upload", response_model=UploadResponse)
+@limiter.limit(settings.rate_limit_upload)
 async def upload_excel(
+    request: Request,
     file: UploadFile = File(...),
     user: CurrentUser = Depends(get_current_user),
 ):

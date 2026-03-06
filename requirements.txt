@@ -10,9 +10,10 @@ matplotlib
 seaborn
 tabulate
 python-jose[cryptography]
-passlib[bcrypt]
+bcrypt
 python-dotenv
 pydantic-settings
 sqlalchemy
 asyncpg
 psycopg2-binary
+slowapi

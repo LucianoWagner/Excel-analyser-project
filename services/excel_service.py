@@ -1,4 +1,11 @@
+"""
+Excel service — parses, stores, and manages Excel sessions in memory
+with automatic expiration and maximum session limits.
+"""
+
+import logging
 import uuid
+from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Optional
 
@@ -8,10 +15,93 @@ from fastapi import HTTPException, UploadFile, status
 from config import settings
 from models import SheetInfo
 
-# ── In-memory session store ──
-# Key: session_id → Value: {"filename": str, "sheets": dict[str, DataFrame]}
-_sessions: dict[str, dict] = {}
+logger = logging.getLogger(__name__)
 
+
+# ══════════════════════════════════════════════════
+#  Session Store with TTL
+# ══════════════════════════════════════════════════
+
+class SessionStore:
+    """In-memory session store with TTL and max capacity."""
+
+    def __init__(self, ttl_minutes: int, max_sessions: int):
+        self._sessions: dict[str, dict] = {}
+        self._ttl = timedelta(minutes=ttl_minutes)
+        self._max_sessions = max_sessions
+
+    def _cleanup_expired(self) -> int:
+        """Remove all expired sessions. Returns count of removed."""
+        now = datetime.now()
+        expired = [
+            sid for sid, data in self._sessions.items()
+            if now - data["last_access"] > self._ttl
+        ]
+        for sid in expired:
+            del self._sessions[sid]
+        if expired:
+            logger.info("Cleaned up %d expired session(s)", len(expired))
+        return len(expired)
+
+    def create(self, filename: str, sheets: dict[str, pd.DataFrame]) -> str:
+        """Store a new session. Cleans up expired first, enforces max capacity."""
+        self._cleanup_expired()
+
+        # Enforce max sessions
+        if len(self._sessions) >= self._max_sessions:
+            # Remove the oldest session
+            oldest_sid = min(self._sessions, key=lambda s: self._sessions[s]["last_access"])
+            logger.warning("Max sessions (%d) reached. Removing oldest: %s", self._max_sessions, oldest_sid)
+            del self._sessions[oldest_sid]
+
+        session_id = str(uuid.uuid4())
+        self._sessions[session_id] = {
+            "filename": filename,
+            "sheets": sheets,
+            "created_at": datetime.now(),
+            "last_access": datetime.now(),
+        }
+        logger.info("Session created: %s (%s) — Active: %d", session_id[:8], filename, len(self._sessions))
+        return session_id
+
+    def get(self, session_id: str) -> dict | None:
+        """Get a session and refresh its last_access timestamp."""
+        self._cleanup_expired()
+        session = self._sessions.get(session_id)
+        if session is None:
+            return None
+        session["last_access"] = datetime.now()
+        return session
+
+    def info(self) -> dict:
+        """Return info about active sessions (for debugging)."""
+        self._cleanup_expired()
+        return {
+            "active_sessions": len(self._sessions),
+            "max_sessions": self._max_sessions,
+            "ttl_minutes": self._ttl.total_seconds() / 60,
+            "sessions": {
+                sid: {
+                    "filename": data["filename"],
+                    "sheets": list(data["sheets"].keys()),
+                    "created_at": data["created_at"].isoformat(),
+                    "last_access": data["last_access"].isoformat(),
+                }
+                for sid, data in self._sessions.items()
+            },
+        }
+
+
+# Singleton instance
+_store = SessionStore(
+    ttl_minutes=settings.session_ttl_minutes,
+    max_sessions=settings.max_sessions,
+)
+
+
+# ══════════════════════════════════════════════════
+#  Public API
+# ══════════════════════════════════════════════════
 
 async def parse_and_store_excel(file: UploadFile) -> tuple[str, list[SheetInfo]]:
     """
@@ -66,13 +156,8 @@ async def parse_and_store_excel(file: UploadFile) -> tuple[str, list[SheetInfo]]
             column_names=list(df.columns.astype(str)),
         ))
 
-    # Store in memory
-    session_id = str(uuid.uuid4())
-    _sessions[session_id] = {
-        "filename": file.filename,
-        "sheets": all_sheets,
-    }
-
+    # Store in memory (with TTL)
+    session_id = _store.create(file.filename, all_sheets)
     return session_id, sheets_info
 
 
@@ -82,17 +167,16 @@ def get_dataframe(session_id: str, sheet_name: Optional[str] = None) -> pd.DataF
     If sheet_name is None, returns the first sheet.
     Always returns a deep copy.
     """
-    session = _sessions.get(session_id)
+    session = _store.get(session_id)
     if session is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Sesión no encontrada: {session_id}. ¿Ya subiste un archivo?",
+            detail=f"Sesión no encontrada o expirada: {session_id}. Subí el archivo de nuevo.",
         )
 
     sheets = session["sheets"]
 
     if sheet_name is None:
-        # Return first sheet
         first_key = next(iter(sheets))
         return sheets[first_key].copy(deep=True)
 
@@ -108,10 +192,4 @@ def get_dataframe(session_id: str, sheet_name: Optional[str] = None) -> pd.DataF
 
 def list_sessions() -> dict:
     """Return info about active sessions (for debugging)."""
-    return {
-        sid: {
-            "filename": data["filename"],
-            "sheets": list(data["sheets"].keys()),
-        }
-        for sid, data in _sessions.items()
-    }
+    return _store.info()

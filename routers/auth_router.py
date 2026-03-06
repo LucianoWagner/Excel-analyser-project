@@ -1,18 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from auth import hash_password, verify_password, create_access_token
+from config import settings
 from database import get_db
 from db_models import User
 from models import LoginRequest, RegisterRequest, AuthResponse
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit(settings.rate_limit_auth)
+async def register(request: Request, req: RegisterRequest, db: AsyncSession = Depends(get_db)):
     """Register a new user (role: 'user' by default)."""
     # Check if username exists
     result = await db.execute(select(User).where(User.username == req.username))
@@ -40,7 +45,9 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=AuthResponse)
+@limiter.limit(settings.rate_limit_auth)
 async def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
