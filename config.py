@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     rate_limit_upload: str = "5/minute"    # Uploads per user per minute
     rate_limit_auth: str = "10/minute"     # Auth attempts per IP per minute
 
+    # ── CORS ──
+    cors_origins: list[str] = ["*"]        # ["https://tu-app.onrender.com"] in production
+
     class Config:
         env_file = ".env"
         extra = "ignore"
