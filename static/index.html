@@ -85,44 +85,12 @@
                 <input type="file" id="file-input" accept=".xlsx,.xls" hidden>
             </div>
 
-            <!-- Help guide (shown after upload) -->
+            <!-- Help guide (shown after upload, populated dynamically) -->
             <div class="help-guide" id="help-guide">
                 <button class="help-toggle" id="help-toggle">💡 ¿Qué puedo preguntar? <span
                         class="help-arrow">▾</span></button>
                 <div class="help-content" id="help-content">
-                    <div class="help-category">
-                        <span class="help-label">📊 Datos</span>
-                        <div class="help-chips">
-                            <button class="chip" data-q="Cuantas filas tiene el dataset?">Contar filas</button>
-                            <button class="chip" data-q="Que columnas tiene el dataset?">Ver columnas</button>
-                            <button class="chip" data-q="Dame las estadisticas descriptivas">Estadísticas</button>
-                            <button class="chip" data-q="Que valores unicos hay en la columna carrera?">Valores
-                                únicos</button>
-                        </div>
-                    </div>
-                    <div class="help-category">
-                        <span class="help-label">🔍 Consultas</span>
-                        <div class="help-chips">
-                            <button class="chip" data-q="Cuantos estudiantes tienen edad mayor a 25?">Filtrar
-                                datos</button>
-                            <button class="chip" data-q="Cual es el promedio de nota_promedio?">Promedio</button>
-                            <button class="chip"
-                                data-q="Promedio de nota_promedio agrupado por carrera">Agrupar</button>
-                            <button class="chip" data-q="Top 3 estudiantes con la nota mas alta">Top N</button>
-                            <button class="chip" data-q="Correlacion entre edad y nota_promedio">Correlación</button>
-                        </div>
-                    </div>
-                    <div class="help-category">
-                        <span class="help-label">📈 Gráficos</span>
-                        <div class="help-chips">
-                            <button class="chip" data-q="Grafico de barras de la columna carrera">Barras</button>
-                            <button class="chip" data-q="Histograma de nota_promedio">Histograma</button>
-                            <button class="chip" data-q="Grafico de torta de la columna ciudad">Torta</button>
-                            <button class="chip" data-q="Box plot de nota_promedio agrupado por carrera">Box
-                                plot</button>
-                            <button class="chip" data-q="Heatmap de correlacion">Heatmap</button>
-                        </div>
-                    </div>
+                    <!-- Chips are generated dynamically from uploaded columns -->
                 </div>
             </div>
 

@@ -18,6 +18,18 @@ from models import SheetInfo
 logger = logging.getLogger(__name__)
 
 
+def _classify_dtype(dtype) -> str:
+    """Classify a pandas dtype into a simple category."""
+    name = str(dtype)
+    if "int" in name or "float" in name:
+        return "numeric"
+    if "bool" in name:
+        return "bool"
+    if "datetime" in name or "date" in name:
+        return "date"
+    return "text"
+
+
 # ══════════════════════════════════════════════════
 #  Session Store with TTL
 # ══════════════════════════════════════════════════
@@ -154,6 +166,7 @@ async def parse_and_store_excel(file: UploadFile) -> tuple[str, list[SheetInfo]]
             rows=len(df),
             columns=len(df.columns),
             column_names=list(df.columns.astype(str)),
+            column_types=[_classify_dtype(df[col].dtype) for col in df.columns],
         ))
 
     # Store in memory (with TTL)

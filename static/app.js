@@ -246,7 +246,11 @@
             chatInput.placeholder = 'Escribí tu pregunta sobre el Excel...';
             updateSessionBadge();
 
-            // Show help guide
+            // Show help guide with real columns
+            const firstSheet = data.sheets[0];
+            if (firstSheet) {
+                buildHelpChips(firstSheet.column_names, firstSheet.column_types);
+            }
             helpGuide.classList.add('active');
 
             // Summary message
@@ -283,16 +287,67 @@
         helpContent.classList.toggle('open');
     });
 
-    // Clickable chips → auto-fill and send
-    document.querySelectorAll('.chip').forEach((chip) => {
-        chip.addEventListener('click', () => {
-            const question = chip.getAttribute('data-q');
-            if (question && state.sessionId) {
-                chatInput.value = question;
-                sendMessage();
-            }
+    function buildHelpChips(columns, types) {
+        // Find a text column (for grouping/barras) and a numeric column (for aggregates)
+        let textCol = null;
+        let numCol = null;
+        for (let i = 0; i < columns.length; i++) {
+            if (!textCol && types[i] === 'text') textCol = columns[i];
+            if (!numCol && types[i] === 'numeric') numCol = columns[i];
+        }
+        // Fallbacks
+        textCol = textCol || columns[0] || 'columna1';
+        numCol = numCol || columns[1] || columns[0] || 'columna2';
+
+        const categories = [
+            {
+                icon: '📊', label: 'Datos', chips: [
+                    { text: 'Contar filas', q: 'Cuantas filas tiene el dataset?' },
+                    { text: 'Ver columnas', q: 'Que columnas tiene el dataset?' },
+                    { text: 'Estadísticas', q: 'Dame las estadisticas descriptivas' },
+                    { text: 'Valores únicos', q: `Que valores unicos hay en la columna ${textCol}?` },
+                ]
+            },
+            {
+                icon: '🔍', label: 'Consultas', chips: [
+                    { text: 'Filtrar datos', q: `Cuantas filas tienen ${textCol} distinto de nulo?` },
+                    { text: 'Promedio', q: `Cual es el promedio de ${numCol}?` },
+                    { text: 'Agrupar', q: `Promedio de ${numCol} agrupado por ${textCol}` },
+                    { text: 'Top N', q: `Top 3 filas con mayor valor en ${numCol}` },
+                    { text: 'Correlación', q: `Correlacion entre las columnas numericas` },
+                ]
+            },
+            {
+                icon: '📈', label: 'Gráficos', chips: [
+                    { text: 'Barras', q: `Grafico de barras de la columna ${textCol}` },
+                    { text: 'Histograma', q: `Histograma de ${numCol}` },
+                    { text: 'Torta', q: `Grafico de torta de la columna ${textCol}` },
+                    { text: 'Box plot', q: `Box plot de ${numCol}` },
+                    { text: 'Heatmap', q: 'Heatmap de correlacion' },
+                ]
+            },
+        ];
+
+        helpContent.innerHTML = categories.map(cat => `
+            <div class="help-category">
+                <span class="help-label">${cat.icon} ${cat.label}</span>
+                <div class="help-chips">
+                    ${cat.chips.map(c => `<button class="chip" data-q="${c.q}">${c.text}</button>`).join('')}
+                </div>
+            </div>
+        `).join('');
+
+        // Attach click listeners to new chips
+        helpContent.querySelectorAll('.chip').forEach((chip) => {
+            chip.addEventListener('click', () => {
+                const question = chip.getAttribute('data-q');
+                if (question && state.sessionId) {
+                    chatInput.value = question;
+                    sendMessage();
+                }
+            });
         });
-    });
+    }
 
     // ═══════════════════════════════════════
     //  Chat

@@ -28,6 +28,7 @@ class SheetInfo(BaseModel):
     rows: int
     columns: int
     column_names: list[str]
+    column_types: list[str]  # "numeric" | "text" | "bool" | "date"
 
 
 class UploadResponse(BaseModel):
