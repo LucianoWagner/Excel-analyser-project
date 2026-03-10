@@ -26,23 +26,28 @@ async def query_excel(
 ):
     """
     Ask a question about the uploaded Excel.
-    - Admin → Pandas Agent (full code gen + charts)
+    - Admin → Pandas Agent (full code gen + charts, versioned mutations)
     - User  → Structured intent router (predefined operations)
     """
-    # Get a deep copy of the DataFrame
-    df = get_dataframe(req.session_id, req.sheet_name)
+    # Get a deep copy of the DataFrame + resolved sheet name
+    df, resolved_sheet = get_dataframe(req.session_id, req.sheet_name)
 
     try:
         if user.is_admin:
-            logger.info(f"[AGENT MODE] user={user.username} question='{req.question[:80]}'")
-            result = await query_with_agent(df, req.question)
+            logger.info("[AGENT MODE] user=%s question='%s'", user.username, req.question[:80])
+            result = await query_with_agent(
+                df=df,
+                question=req.question,
+                session_id=req.session_id,
+                sheet_name=resolved_sheet,
+            )
         else:
-            logger.info(f"[STRUCTURED MODE] user={user.username} question='{req.question[:80]}'")
+            logger.info("[STRUCTURED MODE] user=%s question='%s'", user.username, req.question[:80])
             result = await query_structured(df, req.question)
     except TimeoutError as e:
         raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT, detail=str(e))
     except Exception as e:
-        logger.error(f"Query error: {e}", exc_info=True)
+        logger.error("Query error: %s", e, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al procesar la consulta: {str(e)}",

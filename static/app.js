@@ -26,7 +26,6 @@
     const loginUsername = $('#login-username');
     const loginPassword = $('#login-password');
     const loginBtn = $('#login-btn');
-    const toggleRegister = $('#toggle-register');
     const loginToggleText = $('#login-toggle-text');
 
     const chatMessages = $('#chat-messages');
@@ -81,7 +80,8 @@
         setTimeout(() => { loginAlert.style.display = 'none'; }, 4000);
     }
 
-    toggleRegister.addEventListener('click', () => {
+    loginToggleText.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'A') return;
         state.isRegistering = !state.isRegistering;
         if (state.isRegistering) {
             loginBtn.textContent = 'Registrarse';
@@ -90,8 +90,6 @@
             loginBtn.textContent = 'Iniciar sesión';
             loginToggleText.innerHTML = '¿No tenés cuenta? <a id="toggle-register">Registrate</a>';
         }
-        // Re-attach event since we replaced innerHTML
-        $('#toggle-register').addEventListener('click', arguments.callee);
     });
 
     loginForm.addEventListener('submit', async (e) => {
@@ -272,11 +270,22 @@
         if (state.filename) {
             sessionBadge.textContent = `📄 ${state.filename}`;
             sessionBadge.classList.remove('no-file');
+            if (state.role === 'admin') {
+                document.getElementById('btn-history').style.display = 'inline-flex';
+            }
         } else {
             sessionBadge.textContent = 'Sin archivo';
             sessionBadge.classList.add('no-file');
+            document.getElementById('btn-history').style.display = 'none';
         }
     }
+
+    // Version history button
+    document.getElementById('btn-history').addEventListener('click', () => {
+        if (!state.sessionId || !state.selectedSheet || !state.token) return;
+        const url = `/download?session_id=${state.sessionId}&sheet_name=${encodeURIComponent(state.selectedSheet)}&token=${state.token}`;
+        window.open(url, '_blank');
+    });
 
     // ═══════════════════════════════════════
     //  Help Guide
@@ -390,7 +399,36 @@
             const data = await res.json();
 
             if (!res.ok) {
-                addBotMessage(`Error: ${data.detail || 'No se pudo procesar la consulta.'}`);
+                // Smart error messages by status code
+                switch (res.status) {
+                    case 404:
+                        addBotMessage('⏳ **Tu sesión expiró.** El archivo Excel ya no está en memoria.\n\nSubí el archivo nuevamente para continuar.');
+                        // Reset upload state
+                        state.sessionId = null;
+                        state.filename = null;
+                        state.selectedSheet = null;
+                        updateSessionBadge();
+                        helpGuide.classList.remove('active');
+                        uploadZone.style.display = 'flex';
+                        chatInput.placeholder = 'Primero subí un archivo Excel...';
+                        break;
+                    case 429:
+                        addBotMessage('🚫 **Demasiadas consultas.** Esperá un momento antes de preguntar de nuevo.');
+                        break;
+                    case 401:
+                        addBotMessage('🔒 **Tu sesión de login expiró.** Volvé a iniciar sesión.');
+                        state.token = null;
+                        setTimeout(() => {
+                            document.getElementById('login-view').classList.add('active');
+                            document.getElementById('chat-view').classList.remove('active');
+                        }, 2000);
+                        break;
+                    case 408:
+                        addBotMessage('⏱️ **La consulta tardó demasiado.** Intentá con una pregunta más simple.');
+                        break;
+                    default:
+                        addBotMessage(`❌ Error: ${data.detail || 'No se pudo procesar la consulta.'}`);
+                }
                 btnSend.disabled = false;
                 return;
             }
@@ -404,7 +442,7 @@
 
         } catch (err) {
             showTyping(false);
-            addBotMessage('Error de conexión con el servidor.');
+            addBotMessage('📡 Error de conexión con el servidor. Verificá tu conexión a internet.');
         }
 
         btnSend.disabled = false;

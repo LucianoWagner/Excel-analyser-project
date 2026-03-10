@@ -202,6 +202,7 @@ Interfaz web tipo chatbox servida directamente desde FastAPI (sin build step, si
 - **Chat en tiempo real** con respuestas en lenguaje natural
 - **Gráficos inline** renderizados como imágenes PNG
 - **Guía interactiva** con sugerencias clickeables ("¿Qué puedo preguntar?")
+- **Historial de Versiones (Admin)** permite ver y descargar versiones previas del Excel tras mutaciones.
 - **Responsive** para mobile
 - **Selector de sheet** para consultar diferentes hojas del Excel
 
@@ -259,6 +260,14 @@ Respuesta:
 }
 ```
 
+### Historial y Descarga de Versiones (Solo Admin)
+
+Cada vez que el Agente modifica los datos (ej: limpiando nulos, agregando filas), el sistema guarda una nueva versión del Excel en memoria (hasta 3 versiones por hoja).
+
+- `GET /download?session_id=...&sheet_name=...&token=...` → Abre una página HTML interactiva con el historial de mutaciones y opciones de previsualización.
+- `GET /download/versions?session_id=...&sheet_name=...` → Retorna JSON con el historial de versiones disponibles.
+- `GET /download/excel?session_id=...&sheet_name=...&version=0&token=...` → Descarga el archivo `.xlsx` de la versión especificada (0 es el archivo original intacto).
+
 ### Consultar
 
 ```bash
@@ -310,6 +319,26 @@ El campo `chart_base64` contendrá la imagen PNG codificada en base64.
 
 ---
 
+## 🛡️ Seguridad y Safety Checks
+
+Dado que el Modo Admin utiliza un agente capaz de ejecutar código Python generado por el LLM, el sistema cuenta con **dos capas defensivas de seguridad** estrictas:
+
+### Capa 1: Prevención de Prompt Injection (Pre-LLM)
+Antes de enviar la pregunta al LLM, el backend escanea el texto del usuario utilizando expresiones regulares para detectar intentos de ataque. Esta capa **NO** utiliza un LLM adicional (evitando costos y latencia) y bloquea:
+- Intentos de tomar control del prompt (ej. *"ignora todas las instrucciones dadas previamente"* o *"act as a DAN"*).
+- Código directo camuflado en la pregunta (ej. *"ejecutá os.system('rm -rf /')"*).
+- Intentos de acceder a configuraciones y variables de entorno (`.env`, `/etc/passwd`).
+
+### Capa 2: Interceptor de Ejecución (Pre-Exec)
+Si una consulta elude la primera capa y el LLM genera código, el sistema intercepta dicho código **ANTES de que se ejecute a través de `exec()`**. La clase customizada `SafePythonAstREPLTool` escanea el bloque de código generado en busca de funciones bloqueadas:
+- Librerías del sistema y comandos de red (`os.`, `subprocess`, `requests`, `socket`).
+- Acceso a disco y archivos host (`open(`, `shutil`).
+- Deserializaciones inseguras o ejecuciones anidadas (`pickle`, `eval(`, `exec(`, `__import__`).
+
+Si detecta un patrón peligroso, **bloquea la ejecución** y le devuelve un mensaje de error simulado al LLM advirtiendo del bloqueo, permitiéndole reconsiderar su enfoque sin poner en riesgo al servidor.
+
+---
+
 ## 📊 Operaciones disponibles (modo Structured)
 
 ### Análisis de datos
@@ -351,6 +380,13 @@ El campo `chart_base64` contendrá la imagen PNG codificada en base64.
 | `MAX_FILE_SIZE_MB` | `10` | Tamaño máximo de archivo |
 | `MAX_ROWS` | `100000` | Máximo de filas por sheet |
 | `QUERY_TIMEOUT_SECONDS` | `30` | Timeout por consulta |
+| `SESSION_TTL_MINUTES` | `60` | Expiración de sesión Excel por inactividad |
+| `MAX_SESSIONS` | `50` | Máximo de sesiones simultáneas en memoria |
+| `RATE_LIMIT_QUERY` | `10/minute` | Límite de consultas por IP por minuto |
+| `RATE_LIMIT_UPLOAD` | `5/minute` | Límite de uploads por IP por minuto |
+| `RATE_LIMIT_AUTH` | `10/minute` | Límite de auth por IP por minuto |
+| `CORS_ORIGINS` | `["*"]` | Orígenes permitidos (dominio en producción) |
+| `LOG_FORMAT` | `text` | `text` para desarrollo, `json` para producción |
 
 ---
 

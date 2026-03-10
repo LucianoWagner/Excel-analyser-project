@@ -15,7 +15,7 @@ from slowapi.errors import RateLimitExceeded
 from config import settings
 from database import create_tables, async_session
 from auth import create_default_admin
-from routers import auth_router, upload_router, query_router
+from routers import auth_router, upload_router, query_router, download_router
 
 # ── Logging ──
 # JSON logs in production, human-readable in development
@@ -99,9 +99,10 @@ app.add_middleware(
 )
 
 # ── Routers ──
-app.include_router(auth_router.router)
-app.include_router(upload_router.router)
-app.include_router(query_router.router)
+app.include_router(auth_router)
+app.include_router(upload_router)
+app.include_router(query_router)
+app.include_router(download_router)
 
 # ── Static files ──
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
